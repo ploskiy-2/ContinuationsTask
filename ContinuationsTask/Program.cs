@@ -35,7 +35,11 @@ namespace ContinuationsTask
             CancellationTokenSource displayWelcomeScreenTokenSource = CancellationTokenSource.CreateLinkedTokenSource(downloadUpdateToken, setupMenuToken);
             CancellationToken displayWelcomeScreenToken = displayWelcomeScreenTokenSource.Token;
 
+            ///this is last token 
+            CancellationTokenSource hideSplashTokenSource = CancellationTokenSource.CreateLinkedTokenSource(displayWelcomeScreenToken);
+            CancellationToken hideSplashToken = hideSplashTokenSource.Token;
 
+            
             /// Create start process
             Task showSplashTask = new Task(() =>
             {
@@ -147,6 +151,20 @@ namespace ContinuationsTask
                 
             }, displayWelcomeScreenToken);
 
+            ///create last linked task 
+            Task hideSplashTask = displayWelcomeScreenTask.ContinueWith((displayWelcomeScreenResult) =>
+            {
+                if (hideSplashToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                Thread.Sleep(1000);
+                Console.WriteLine("Hide splash....");
+                Thread.Sleep(1000);
+                Console.WriteLine("Splash was hided");
+
+            }, hideSplashToken);
+
             try
             {
                 /// Start showsplash and it will be interrupted  with a 20% chance 
@@ -197,8 +215,8 @@ namespace ContinuationsTask
                     displayWelcomeScreenTask.Wait();
                 }
 
-
-
+                hideSplashTask.Wait();
+                
             }
             catch (AggregateException ae)
             {
@@ -216,6 +234,17 @@ namespace ContinuationsTask
                 setupMenuTokenSource.Dispose();
                 downloadUpdateTokenSource.Dispose();
                 displayWelcomeScreenTokenSource.Dispose();
+                hideSplashTokenSource.Dispose();
+            }
+            if (!hideSplashToken.IsCancellationRequested)
+            {
+                Console.WriteLine();
+                Console.WriteLine("The program was successfully launched");
+            }
+            else
+            {
+                Console.WriteLine();
+                Console.WriteLine("An error was detected when starting the program");
             }
         }
     }
