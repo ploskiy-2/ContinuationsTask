@@ -1,0 +1,8 @@
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\bin\Debug\ContinuationsTask.exe.config
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\bin\Debug\ContinuationsTask.exe
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\bin\Debug\ContinuationsTask.pdb
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\obj\Debug\ContinuationsTask.csproj.AssemblyReference.cache
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\obj\Debug\ContinuationsTask.csproj.SuggestedBindingRedirects.cache
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\obj\Debug\ContinuationsTask.csproj.CoreCompileInputs.cache
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\obj\Debug\ContinuationsTask.exe
+C:\Users\VLADIMIR\source\repos\ContinuationsTask\ContinuationsTask\obj\Debug\ContinuationsTask.pdb
