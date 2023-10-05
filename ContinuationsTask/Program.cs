@@ -31,8 +31,11 @@ namespace ContinuationsTask
             CancellationTokenSource downloadUpdateTokenSource = CancellationTokenSource.CreateLinkedTokenSource(checkForUpdateToken);
             CancellationToken downloadUpdateToken = downloadUpdateTokenSource.Token;
 
-                    
-            
+            ///this is linked token for downloadUpdate and setupMenu
+            CancellationTokenSource displayWelcomeScreenTokenSource = CancellationTokenSource.CreateLinkedTokenSource(downloadUpdateToken, setupMenuToken);
+            CancellationToken displayWelcomeScreenToken = displayWelcomeScreenTokenSource.Token;
+
+
             /// Create start process
             Task showSplashTask = new Task(() =>
             {
@@ -130,6 +133,20 @@ namespace ContinuationsTask
                 }
             }, downloadUpdateToken).Unwrap();
 
+            ///create second to last linked task 
+            Task displayWelcomeScreenTask = new Task(() =>
+            {
+                if (displayWelcomeScreenToken.IsCancellationRequested)
+                {
+                    return;
+                }
+                Thread.Sleep(1000);
+                Console.WriteLine("Display welcome screen....");
+                Thread.Sleep(1000);
+                Console.WriteLine("Welcome screen was displayed");
+                
+            }, displayWelcomeScreenToken);
+
             try
             {
                 /// Start showsplash and it will be interrupted  with a 20% chance 
@@ -171,6 +188,17 @@ namespace ContinuationsTask
 
                 await Task.WhenAll(setupMenuTask, downloadUpdateTask);
 
+
+
+                if (!displayWelcomeScreenToken.IsCancellationRequested)
+                {
+                   
+                    displayWelcomeScreenTask.Start();
+                    displayWelcomeScreenTask.Wait();
+                }
+
+
+
             }
             catch (AggregateException ae)
             {
@@ -187,6 +215,7 @@ namespace ContinuationsTask
                 updateTokenSource.Dispose();
                 setupMenuTokenSource.Dispose();
                 downloadUpdateTokenSource.Dispose();
+                displayWelcomeScreenTokenSource.Dispose();
             }
         }
     }
