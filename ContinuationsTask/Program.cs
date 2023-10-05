@@ -10,6 +10,7 @@ namespace ContinuationsTask
         static async Task Main(string[] args)
         {
             // Create token which will report about abolition
+            
             CancellationTokenSource showSplashcancelTokenSource = new CancellationTokenSource();
             CancellationToken showSplashToken = showSplashcancelTokenSource.Token;
 
@@ -22,9 +23,15 @@ namespace ContinuationsTask
             CancellationTokenSource updateTokenSource = CancellationTokenSource.CreateLinkedTokenSource(showSplashToken);
             CancellationToken checkForUpdateToken = updateTokenSource.Token;
 
-            
-            
-            /// Create first process. 
+            ///this is child token for licenseToken
+            CancellationTokenSource setupMenuTokenSource = CancellationTokenSource.CreateLinkedTokenSource(licenseToken);
+            CancellationToken setupMenuToken = setupMenuTokenSource.Token;
+
+            ///this is child token for checkforupdateToken
+            CancellationTokenSource downloadUpdateTokenSource = CancellationTokenSource.CreateLinkedTokenSource(checkForUpdateToken);
+            CancellationToken downloadUpdateToken = downloadUpdateTokenSource.Token;
+
+            /// Create start process
             Task showSplashTask = new Task(() =>
             {
                 Console.WriteLine("ShowSplash process has started...");
@@ -72,14 +79,33 @@ namespace ContinuationsTask
                 if (checkForUpdateToken.IsCancellationRequested)
                 {
                     Console.WriteLine("Check for update canceled.");
-                    Console.WriteLine("Download updates");
                 }
                 else
                 {
-                    Console.WriteLine("All updates downloaded");
+                    Console.WriteLine("Updates were found");
                 }
             }, checkForUpdateToken);
 
+            ///create new task which will be child task for licenseTask
+            Task setupMenuTask = licenseTask.ContinueWith(async (licenseResult) =>
+            {
+                if (setupMenuToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                Console.WriteLine("Setup menus...");
+                Thread.Sleep(1000); // Simulate  process
+                if (setupMenuToken.IsCancellationRequested)
+                {
+                    Console.WriteLine("Setup menus canceled.");
+                    Console.WriteLine("Server error");
+                }
+                else
+                {
+                    Console.WriteLine("Setup menus finished");
+                }
+            }, setupMenuToken);
 
             try
             {
@@ -106,7 +132,15 @@ namespace ContinuationsTask
                     updateTokenSource.Cancel();
                 }
 
-                await Task.WhenAll(licenseTask, checkForUpdateTask);
+                await Task.WhenAll(checkForUpdateTask, licenseTask);
+
+                Thread.Sleep(10);
+                if (new Random().Next(10) < 2)
+                {
+                    setupMenuTokenSource.Cancel();
+                }
+                
+                await Task.WhenAll(setupMenuTask);
 
             }
             catch (AggregateException ae)
@@ -122,7 +156,8 @@ namespace ContinuationsTask
                 showSplashcancelTokenSource.Dispose();
                 licenseTokenSource.Dispose();
                 updateTokenSource.Dispose();
-
+                setupMenuTokenSource.Dispose();
+                downloadUpdateTokenSource.Dispose();
             }
         }
     }
