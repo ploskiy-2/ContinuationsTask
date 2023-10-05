@@ -13,10 +13,13 @@ namespace ContinuationsTask
             CancellationTokenSource showSplashcancelTokenSource = new CancellationTokenSource();
             CancellationToken showSplashToken = showSplashcancelTokenSource.Token;
 
-            CancellationTokenSource licenseTokenSource = new CancellationTokenSource();
+            ///created dependent tokens 
+            ///(if showSplashToken is canceled, then the child tokens will also
+            ///be canceled immediately, without calling the task)
+            CancellationTokenSource licenseTokenSource = CancellationTokenSource.CreateLinkedTokenSource(showSplashToken);
             CancellationToken licenseToken = licenseTokenSource.Token;
 
-            CancellationTokenSource updateTokenSource = new CancellationTokenSource();
+            CancellationTokenSource updateTokenSource = CancellationTokenSource.CreateLinkedTokenSource(showSplashToken);
             CancellationToken checkForUpdateToken = updateTokenSource.Token;
 
             
@@ -37,7 +40,7 @@ namespace ContinuationsTask
             /// Create second process. it is continuation of ShowSplash 
             Task licenseTask = showSplashTask.ContinueWith(async(showSplashResult) =>
             {             
-                if (showSplashTask.IsCanceled)
+                if (licenseToken.IsCancellationRequested)
                 {
                     return;
                 }
@@ -59,7 +62,7 @@ namespace ContinuationsTask
             /// Create third process which works async with licenseTask
             Task checkForUpdateTask = showSplashTask.ContinueWith(async(showSplashResult) =>
             {
-                if (showSplashTask.IsCanceled)
+                if (checkForUpdateToken.IsCancellationRequested)
                 {
                     return;
                 }
