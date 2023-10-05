@@ -31,6 +31,8 @@ namespace ContinuationsTask
             CancellationTokenSource downloadUpdateTokenSource = CancellationTokenSource.CreateLinkedTokenSource(checkForUpdateToken);
             CancellationToken downloadUpdateToken = downloadUpdateTokenSource.Token;
 
+                    
+            
             /// Create start process
             Task showSplashTask = new Task(() =>
             {
@@ -53,7 +55,7 @@ namespace ContinuationsTask
                 }
                 
                 Console.WriteLine("Requesting license...");
-                Thread.Sleep(1000); // Simulate license verification process
+                await Task.Delay(2000); // Simulate license verification process
                 if (licenseToken.IsCancellationRequested)
                 {
                     //licenseToken.ThrowIfCancellationRequested();
@@ -75,7 +77,7 @@ namespace ContinuationsTask
                 }
 
                 Console.WriteLine("Checking updates...");
-                Thread.Sleep(1000); // Simulate checking updates process
+                await Task.Delay(2000); // Simulate checking updates process
                 if (checkForUpdateToken.IsCancellationRequested)
                 {
                     Console.WriteLine("Check for update canceled.");
@@ -87,7 +89,7 @@ namespace ContinuationsTask
             }, checkForUpdateToken);
 
             ///create new task which will be child task for licenseTask
-            Task setupMenuTask = licenseTask.ContinueWith(async (licenseResult) =>
+            Task setupMenuTask = licenseTask.ContinueWith(async(licenseResult) =>
             {
                 if (setupMenuToken.IsCancellationRequested)
                 {
@@ -95,7 +97,7 @@ namespace ContinuationsTask
                 }
 
                 Console.WriteLine("Setup menus...");
-                Thread.Sleep(1000); // Simulate  process
+                await Task.Delay(2000); 
                 if (setupMenuToken.IsCancellationRequested)
                 {
                     Console.WriteLine("Setup menus canceled.");
@@ -105,7 +107,28 @@ namespace ContinuationsTask
                 {
                     Console.WriteLine("Setup menus finished");
                 }
-            }, setupMenuToken);
+            }, setupMenuToken).Unwrap(); 
+
+            ///create new task which will be child task for checkforupdate
+            Task downloadUpdateTask = checkForUpdateTask.ContinueWith(async(checkForUpdateResult) =>
+            {
+                if (downloadUpdateToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                Console.WriteLine("Downloading updates....");
+                await Task.Delay(2000);
+                if (downloadUpdateToken.IsCancellationRequested)
+                {
+                    Console.WriteLine("Download updates canceled");
+                    Console.WriteLine("No rights for this operation");
+                }
+                else
+                {
+                    Console.WriteLine("Download updates finished");
+                }
+            }, downloadUpdateToken).Unwrap();
 
             try
             {
@@ -125,13 +148,13 @@ namespace ContinuationsTask
                     licenseTokenSource.Cancel();
                 }
 
-
                 Thread.Sleep(10);
                 if (new Random().Next(10) < 2)
                 {
                     updateTokenSource.Cancel();
                 }
 
+                
                 await Task.WhenAll(checkForUpdateTask, licenseTask);
 
                 Thread.Sleep(10);
@@ -139,8 +162,14 @@ namespace ContinuationsTask
                 {
                     setupMenuTokenSource.Cancel();
                 }
-                
-                await Task.WhenAll(setupMenuTask);
+
+                Thread.Sleep(10);
+                if (new Random().Next(10) < 2)
+                {
+                    downloadUpdateTokenSource.Cancel();
+                }
+
+                await Task.WhenAll(setupMenuTask, downloadUpdateTask);
 
             }
             catch (AggregateException ae)
