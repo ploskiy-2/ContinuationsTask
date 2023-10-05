@@ -16,6 +16,11 @@ namespace ContinuationsTask
             CancellationTokenSource licenseTokenSource = new CancellationTokenSource();
             CancellationToken licenseToken = licenseTokenSource.Token;
 
+            CancellationTokenSource updateTokenSource = new CancellationTokenSource();
+            CancellationToken checkForUpdateToken = updateTokenSource.Token;
+
+            
+            
             /// Create first process. 
             Task showSplashTask = new Task(() =>
             {
@@ -30,9 +35,9 @@ namespace ContinuationsTask
             }, showSplashToken);
 
             /// Create second process. it is continuation of ShowSplash 
-            Task licenseTask = showSplashTask.ContinueWith((showSplashResult) =>
+            Task licenseTask = showSplashTask.ContinueWith(async(showSplashResult) =>
             {             
-                if (showSplashTask.IsCanceled || licenseToken.IsCancellationRequested)
+                if (showSplashTask.IsCanceled)
                 {
                     return;
                 }
@@ -50,6 +55,28 @@ namespace ContinuationsTask
                     Console.WriteLine("License verified.");
                 }
             }, licenseToken);
+
+            /// Create third process which works async with licenseTask
+            Task checkForUpdateTask = showSplashTask.ContinueWith(async(showSplashResult) =>
+            {
+                if (showSplashTask.IsCanceled)
+                {
+                    return;
+                }
+
+                Console.WriteLine("Checking updates...");
+                Thread.Sleep(1000); // Simulate checking updates process
+                if (checkForUpdateToken.IsCancellationRequested)
+                {
+                    Console.WriteLine("Check for update canceled.");
+                    Console.WriteLine("Download updates");
+                }
+                else
+                {
+                    Console.WriteLine("All updates downloaded");
+                }
+            }, checkForUpdateToken);
+
 
             try
             {
@@ -69,7 +96,14 @@ namespace ContinuationsTask
                     licenseTokenSource.Cancel();
                 }
 
-                Task.WaitAll(licenseTask);
+
+                Thread.Sleep(10);
+                if (new Random().Next(10) < 2)
+                {
+                    updateTokenSource.Cancel();
+                }
+
+                await Task.WhenAll(licenseTask, checkForUpdateTask);
 
             }
             catch (AggregateException ae)
@@ -84,6 +118,7 @@ namespace ContinuationsTask
             {
                 showSplashcancelTokenSource.Dispose();
                 licenseTokenSource.Dispose();
+                updateTokenSource.Dispose();
 
             }
         }
