@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -45,29 +46,19 @@ namespace ContinuationsTask
             {
                 Console.WriteLine("ShowSplash process has started...");
                 Thread.Sleep(2000);
-                if (showSplashToken.IsCancellationRequested)
-                {
-                    showSplashToken.ThrowIfCancellationRequested();
-                    Console.WriteLine("This crashed. All next processes canceled");
-                }
                 Console.WriteLine("ShowSplash process has finished.");
-            }, showSplashToken);
+            });
 
             /// Create second process. it is continuation of ShowSplash 
-            Task licenseTask = showSplashTask.ContinueWith(async(showSplashResult) =>
-            {             
-                if (licenseToken.IsCancellationRequested)
-                {
-                    return;
-                }
-                
+            Task licenseTask = showSplashTask.ContinueWith((showSplashResult,t) =>
+            {               
                 Console.WriteLine("Requesting license...");
-                await Task.Delay(2000); // Simulate license verification process
+                Thread.Sleep(2000); // Simulate license verification process
                 if (licenseToken.IsCancellationRequested)
                 {
-                    //licenseToken.ThrowIfCancellationRequested();
                     Console.WriteLine("License verification canceled.");
                     Console.WriteLine("No license.");
+                    licenseToken.ThrowIfCancellationRequested();
                 }
                 else
                 {
@@ -76,18 +67,17 @@ namespace ContinuationsTask
             }, licenseToken);
 
             /// Create third process which works async with licenseTask
-            Task checkForUpdateTask = showSplashTask.ContinueWith(async(showSplashResult) =>
+            Task checkForUpdateTask = showSplashTask.ContinueWith((showSplashResult,t) =>
             {
-                if (checkForUpdateToken.IsCancellationRequested)
-                {
-                    return;
-                }
+
 
                 Console.WriteLine("Checking updates...");
-                await Task.Delay(2000); // Simulate checking updates process
+                Thread.Sleep(2000); ; // Simulate checking updates process
                 if (checkForUpdateToken.IsCancellationRequested)
                 {
                     Console.WriteLine("Check for update canceled.");
+                    checkForUpdateToken.ThrowIfCancellationRequested();
+
                 }
                 else
                 {
@@ -96,74 +86,64 @@ namespace ContinuationsTask
             }, checkForUpdateToken);
 
             ///create new task which will be child task for licenseTask
-            Task setupMenuTask = licenseTask.ContinueWith(async(licenseResult) =>
+            Task setupMenuTask = licenseTask.ContinueWith((licenseResult,t) =>
             {
-                if (setupMenuToken.IsCancellationRequested)
-                {
-                    return;
-                }
+
 
                 Console.WriteLine("Setup menus...");
-                await Task.Delay(2000); 
+                Thread.Sleep(2000);
                 if (setupMenuToken.IsCancellationRequested)
                 {
                     Console.WriteLine("Setup menus canceled.");
                     Console.WriteLine("Server error");
+                    setupMenuToken.ThrowIfCancellationRequested();
+
                 }
                 else
                 {
                     Console.WriteLine("Setup menus finished");
                 }
-            }, setupMenuToken).Unwrap(); 
+            }, TaskContinuationOptions.NotOnCanceled, setupMenuToken); 
 
             ///create new task which will be child task for checkforupdate
-            Task downloadUpdateTask = checkForUpdateTask.ContinueWith(async(checkForUpdateResult) =>
+            Task downloadUpdateTask = checkForUpdateTask.ContinueWith((checkForUpdateResult,t) =>
             {
-                if (downloadUpdateToken.IsCancellationRequested)
-                {
-                    return;
-                }
-
                 Console.WriteLine("Downloading updates....");
-                await Task.Delay(2000);
+                Thread.Sleep(2000);
                 if (downloadUpdateToken.IsCancellationRequested)
                 {
                     Console.WriteLine("Download updates canceled");
                     Console.WriteLine("No rights for this operation");
+                    downloadUpdateToken.ThrowIfCancellationRequested();
+
                 }
                 else
                 {
                     Console.WriteLine("Download updates finished");
                 }
-            }, downloadUpdateToken).Unwrap();
-
+            }, TaskContinuationOptions.NotOnCanceled, downloadUpdateToken);
+            var multiTasks = new List<Task>();
+            multiTasks.Add(setupMenuTask);
+            multiTasks.Add(downloadUpdateTask);
             ///create second to last linked task 
-            Task displayWelcomeScreenTask = new Task(() =>
+            Task displayWelcomeScreenTask = Task.WhenAll(multiTasks).ContinueWith((checkForUpdateResult) =>
             {
-                if (displayWelcomeScreenToken.IsCancellationRequested)
-                {
-                    return;
-                }
                 Thread.Sleep(1000);
                 Console.WriteLine("Display welcome screen....");
                 Thread.Sleep(1000);
                 Console.WriteLine("Welcome screen was displayed");
                 
-            }, displayWelcomeScreenToken);
+            });
 
             ///create last linked task 
-            Task hideSplashTask = displayWelcomeScreenTask.ContinueWith((displayWelcomeScreenResult) =>
+            Task hideSplashTask = displayWelcomeScreenTask.ContinueWith((displayWelcomeScreenResult,t) =>
             {
-                if (hideSplashToken.IsCancellationRequested)
-                {
-                    return;
-                }
                 Thread.Sleep(1000);
                 Console.WriteLine("Hide splash....");
                 Thread.Sleep(1000);
                 Console.WriteLine("Splash was hided");
 
-            }, hideSplashToken);
+            }, TaskContinuationOptions.NotOnFaulted, hideSplashToken);
 
             try
             {
@@ -173,7 +153,7 @@ namespace ContinuationsTask
                 Thread.Sleep(10);
                 if (new Random().Next(10) < 2)
                 {
-                    showSplashcancelTokenSource.Cancel();
+                    ///showSplashcancelTokenSource.Cancel();
                 }
                 showSplashTask.Wait();
 
@@ -190,7 +170,7 @@ namespace ContinuationsTask
                 }
 
                 
-                await Task.WhenAll(checkForUpdateTask, licenseTask);
+                Task.WaitAll(checkForUpdateTask, licenseTask);
 
                 Thread.Sleep(10);
                 if (new Random().Next(10) < 2)
@@ -204,7 +184,7 @@ namespace ContinuationsTask
                     downloadUpdateTokenSource.Cancel();
                 }
 
-                await Task.WhenAll(setupMenuTask, downloadUpdateTask);
+                Task.WaitAll(setupMenuTask, downloadUpdateTask);
 
 
 
